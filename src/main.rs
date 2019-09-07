@@ -1,4 +1,3 @@
-use std::cmp;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -6,7 +5,6 @@ use std::io::Write;
 use std::time::Instant;
 
 use petgraph;
-use petgraph::dot::{Config, Dot};
 use petgraph::graph::NodeIndex;
 use petgraph::Direction;
 
@@ -29,94 +27,35 @@ fn main() -> Result<(), std::io::Error> {
             )
         })
         .collect();
-    let self_cycles: Vec<Vec<[char; 2]>> = short_names
-        .clone()
-        .into_iter()
-        .filter(|x| x.0 == x.1)
-        .map(|x| vec![[x.0, x.1]])
-        .collect();
-    for self_path in self_cycles {
-        found_cycles.push(Box::new(self_path));
-    }
-    let pairs_wo_cycles: Vec<(char, char)> = short_names
-        .clone()
-        .into_iter()
-        .filter(|x| x.0 != x.1)
-        .collect();
-    let mut pair_freq = HashMap::new();
-    for pair in pairs_wo_cycles.clone().into_iter() {
-        let mut temp = pair.0.to_string();
-        temp.push(pair.1);
-        *pair_freq.entry(temp).or_insert(0) += 1;
-    }
-    let mut two_pairs_cycles = HashMap::new();
-    for pair in pairs_wo_cycles.clone().into_iter() {
-        let mut str_a = pair.0.to_string();
-        str_a.push(pair.1);
-        let mut str_b = pair.1.to_string();
-        str_b.push(pair.0);
-        let str_ab = [&*str_a, &*str_b].concat();
-        let str_ba = [&*str_b, &*str_a].concat();
-        if !(two_pairs_cycles.contains_key(&*str_ba) ^ two_pairs_cycles.contains_key(&*str_ab)) {
-            //pair_already_in hashmap
-            let a_count = pair_freq.get(&*str_a).unwrap_or(&0);
-            let b_count = pair_freq.get(&*str_b).unwrap_or(&0);
-            let str_ab = str_a + &str_b;
-            let min = cmp::min(a_count, b_count);
-            two_pairs_cycles.insert(
-                str_ab,
-                (a_count, b_count, min, a_count - min, b_count - min),
-            );
-        }
-    }
-    let mut pairs_cleaned_from_2_cycles = Vec::new();
-    for (key, value) in two_pairs_cycles.into_iter() {
-        let temp: Vec<char> = key.clone().chars().collect();
-        for _ in 0..*value.2 {
-            found_cycles.push(Box::new(vec![[temp[0], temp[1]], [temp[2], temp[3]]]));
-        }
-        let temp: Vec<char> = key.clone().chars().collect();
-        let a_lasted_num = value.3;
-        for _ in 0..a_lasted_num {
-            pairs_cleaned_from_2_cycles.push(Box::new((temp[0], temp[1])));
-        }
-        let b_lasted_num = value.4;
-        for _ in 0..b_lasted_num {
-            pairs_cleaned_from_2_cycles.push(Box::new((temp[2], temp[3])));
-        }
-    }
-
-    let mut nodes: Vec<char> = pairs_cleaned_from_2_cycles
-        .clone()
-        .into_iter()
-        .map(|x| x.0)
-        .collect();
+    let mut nodes: Vec<char> = short_names.clone().into_iter().map(|x| x.0).collect();
     nodes.sort();
     nodes.dedup();
-    //let mut graph = petgraph::graphmap::DiGraphMap::<char, i32>::new(); //<char, i32>::new();
-    let mut graph = petgraph::Graph::<char, i32>::new(); //<char, i32>::new();
+    //Create graph and populate it
+    let mut graph = petgraph::Graph::<char, i32>::new();
     let mut graph_nodes = HashMap::new();
+    //Populate nodes
     for node in nodes {
         let temp = graph.add_node(node);
         graph_nodes.insert(node, temp);
     }
+    //Calculate edge weights
     let mut edge_freq = HashMap::new();
-    for pair in pairs_cleaned_from_2_cycles.clone().into_iter() {
+    for pair in short_names.clone().into_iter() {
         let mut temp = pair.0.to_string();
         temp.push(pair.1);
         *edge_freq.entry(temp).or_insert(0) += 1;
     }
+    //Populate edges
     for (key, value) in edge_freq.into_iter() {
         let temp: Vec<char> = key.clone().chars().collect();
         let start = temp[0];
         let end = temp[1];
-        //graph.add_edge(start, end, value);
         graph.add_edge(graph_nodes[&start], graph_nodes[&end], value);
     }
-    //dbg!(&graph);
+    //Search for cycles in grapg and exclude them
     let mut found_any = true;
     let mut search_depth = 3;
-    let depth_limit = 10;
+    let depth_limit = 8;
     while search_depth <= depth_limit {
         if found_any == false {
             search_depth += 1;
@@ -125,6 +64,7 @@ fn main() -> Result<(), std::io::Error> {
         for (_, node_index) in graph_nodes.clone().into_iter() {
             let mut path = Vec::new();
             breadth_search(node_index, node_index, &graph, &mut path, search_depth);
+            //If path != [] than it found cycle
             if path != [] {
                 found_any = true;
                 path.reverse();
@@ -158,6 +98,7 @@ fn main() -> Result<(), std::io::Error> {
         }
     }
 
+    //Collect found paths into structure that are easier to work with
     let mut found_paths = Vec::new();
     for (_, node_index) in graph_nodes.clone().into_iter() {
         found_paths.extend(depth_first_serach(
@@ -167,6 +108,7 @@ fn main() -> Result<(), std::io::Error> {
             &mut Vec::new(),
         ));
     }
+    //Search for longest path in our graph, so it would be our main path
     let longest_base_path = found_paths.iter().max_by_key(|x| x.len()).unwrap();
     let mut result = Vec::new();
     for start in 0..longest_base_path.len() - 1 {
@@ -178,7 +120,18 @@ fn main() -> Result<(), std::io::Error> {
     }
     let mut notfound_counter = 0;
     let mut previous_found_cycles_len = found_cycles.len();
+    //For each found cycle try to find place to embed it
     while found_cycles.len() > 0 {
+        if notfound_counter > 10 {
+            notfound_counter = 0;
+            //rotate all cycles to expose other position
+            for (cycle_pos, cycle) in found_cycles.clone().iter().enumerate() {
+                let mut temp_cycle = cycle.clone();
+                let first_element = temp_cycle.remove(0);
+                temp_cycle.push(first_element);
+                found_cycles[cycle_pos] = temp_cycle;
+            }
+        }
         for (cycle_pos, cycle) in found_cycles.iter().enumerate() {
             let cycle_letter = cycle[0][0];
             let mut found = false;
@@ -199,13 +152,10 @@ fn main() -> Result<(), std::io::Error> {
             notfound_counter += 1;
         }
         previous_found_cycles_len = found_cycles.len();
-        if notfound_counter > 100 {
-            println!("Couldn\'t colapse all cycles, recommend to restart because result probably isn\'t the best");
-            println!("Cycles on merged: {:?}", found_cycles.len());
-            break;
-        }
     }
-    city_names.sort_by(|a, b| a.len().cmp(&b.len()));
+    //Sort city names by length, so we would fild longest one first
+    city_names.sort_by(|a, b| b.len().cmp(&a.len()));
+    //Find longest city names according to letter pairs
     let mut result_string = String::new();
     for pair in &result {
         for (city_num, city) in city_names.iter().enumerate() {
@@ -217,7 +167,7 @@ fn main() -> Result<(), std::io::Error> {
             }
         }
     }
-    let mut output_file = File::create("resulting_string.txt")?;
+    let mut output_file = File::create("output.txt")?;
     output_file.write(result_string.as_bytes())?;
 
     println!(
