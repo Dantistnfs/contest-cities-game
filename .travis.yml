@@ -2,68 +2,43 @@ dist: trusty
 language: rust
 services: docker
 sudo: required
-
 env:
   global:
-    - CRATE_NAME=contest-cities-game
-
+  - CRATE_NAME=contest-cities-game
 matrix:
   include:
-    # Android
-    - env: TARGET=aarch64-linux-android DISABLE_TESTS=1
-
-    # Linux
-    - env: TARGET=aarch64-unknown-linux-gnu
-    - env: TARGET=x86_64-unknown-linux-gnu
-
-    # OSX
-    - env: TARGET=x86_64-apple-darwin
-      os: osx
-
-    # Windows
-    - env: TARGET=x86_64-pc-windows-gnu
-
+  - env: TARGET=aarch64-linux-android DISABLE_TESTS=1
+  - env: TARGET=aarch64-unknown-linux-gnu
+  - env: TARGET=x86_64-unknown-linux-gnu
+  - env: TARGET=x86_64-apple-darwin
+    os: osx
+  - env: TARGET=x86_64-pc-windows-gnu
 before_install:
-  - set -e
-  - rustup self update
-
+- set -e
+- rustup self update
 install:
-  - sh ci/install.sh
-  - source ~/.cargo/env || true
-
+- sh ci/install.sh
+- source ~/.cargo/env || true
 script:
-  - bash ci/script.sh
-
+- bash ci/script.sh
 after_script: set +e
-
 before_deploy:
-  - sh ci/before_deploy.sh
-
+- sh ci/before_deploy.sh
 deploy:
-  api_key:
-    secure: "BMT6uArS7H4yZ9m/i9ziShuLfxzRlgB1xAkDWbgeMILTb0V6Ro7LOq9gTBMjSX89EX+Q6lc3xAB+g/MoxFlhX6+X3YJwdb62AncfJNent2NlKkuXYgTidhT3bPIchl6IjrcWHBuRoQi3fbIBgjfF2BcHwTGaUOeRUr79lyj7v3ot/NW8BDOhGJiSJ/pSm0FHVTgQwbXzJ0Yh/ZgQPAJ4Q5Rysnef78L3S04/EyHnDydUZZxDDOhIEDKYL5BJGWQPeFY6nVKqgrustGAvF25wYUjnxe+1TBaeAjNKxfiYdBZkmJsL07QDpk+Q7Tc0Xpe68utjO1hQrr5JopDbKbRkR/5C1ncMQUHUvIYbkou23NIimDQEdHvGP0ipexbJiuQ+6pHdshrjO51xl1NV065jpVn9d6cw+6xTINWYqCZ4/BLnMImq1HPyQ/682SFi1YFj/t1HpUFCjXBD19xZRNsHIvMTCBVgzC0zjyEIKJYuKHv/Vh8snuMmQk6O5E/kr8B1gAG+ATmjUpkK8IijEA8WYFz74Yfi+Aydy1p0Zf58ygSV1mpE0W487C9cMZsOq/cPsYpKzgqiFpKJPJxHXeN4p//gkbIdGDHyF24HfYf9kdLC2b0AihcHo9Onim2mLwr9UtsbwFoy6ahfzCeTuXV875Huq55iLIP72Ksg/Zpir3I="
-  file_glob: true
-  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
-  on:
-    # TODO Here you can pick which targets will generate binary releases
-    # In this example, there are some targets that are tested using the stable
-    # and nightly channels. This condition makes sure there is only one release
-    # for such targets and that's generated using the stable channel
-    condition: $TRAVIS_RUST_VERSION = stable
   provider: releases
-  skip_cleanup: true
-
+  api_key:
+    secure: KKa+jqHYUasW9Y4F0NUdhRy0ymMhiNINPktghevG9fjiTkxa46BsA16lEBNv/VxTgVWLgEYR3xncbphyCQGxHMY9ckxEJqiQ7c26iXNM5tl41j+E2WP4GxUDQaU4SffuB2Q4Y/vTtb563MJ29++zgw3TKdG9ANxT/G8VxP83wSVIchLnZlNIuChIxtKDv6NoIohwOjhzWHBZpJDTaQbtWEoWkda9rRes8cPM0CXm4Ht/aq9sDubqHUsmqIM3zT81ldnssxqIK/0mChiY4a876TvYDCQG6pss0jwBqP0l/Ziq9PXUZw/F+Lc6TtFwqtof+9G7umvpTmDqc+fyVExdr/Ty36g1n1PKuUpr5pHADHibArRWRnKz7/Z+QDAoNZDYidGPiojRx+lwtVmUnzf3kqXvqoEe0PLh3Oiwt61rDbdiTHeJTW6xVhuJeQxAR4+Xmnlb3bK7R/tjs3cezdU5SZ5jG9RL6ebVHtX5uZhG07t2noTFCIGLvPMtaQRnqhSqqG1W3oMGZzk8MhL+e2pbSwBhfYBAnFBl/5VK9MBvYYv+fpqGlz9/1DkYNvqbi/scFSU5nLdgXOc/cJAmPtJV8VvDErUsWjNRzFOkS92ap1OaIIbAgMwvN7fSEV38/L8nA4dVn+0mLBH6meLB1z/WVDvnqLfM3LI6jvcEpbeFnWc=
+  file_glob: true
+  file: "$CRATE_NAME-$TRAVIS_TAG-$TARGET.*"
+  on:
+    repo: Dantistnfs/contest-cities-game
 cache: cargo
 before_cache:
-  # Travis can't cache files that are not readable by "others"
-  - chmod -R a+r $HOME/.cargo
-
+- chmod -R a+r $HOME/.cargo
 branches:
   only:
-    # release tags
-    - /^v\d+\.\d+\.\d+.*$/
-    - master
-
+  - "/^v\\d+\\.\\d+\\.\\d+.*$/"
+  - master
 notifications:
   email:
     on_success: never
