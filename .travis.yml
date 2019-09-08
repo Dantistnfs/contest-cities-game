@@ -40,12 +40,8 @@ before_deploy:
   - sh ci/before_deploy.sh
 
 deploy:
-  # TODO update `api_key.secure`
-  # - Create a `public_repo` GitHub token. Go to: https://github.com/settings/tokens/new
-  # - Encrypt it: `travis encrypt 0123456789012345678901234567890123456789
-  # - Paste the output down here
   api_key:
-    secure: A9v3PIzQQ4U08OHFmDPQzNXbNHEb7YHyLXCvMF+dXFuNSvhUNlmQYykxqUf3dvikhJL2/bsZ14umm7ni7fQh0tGwJ4+lPpNzYAcweGgNXnWvjTpY6ovuRbr3gs4/srkyxp/GBDmSW5L8wFN3hKCB+Lm0YnIPB9IA2afP8a30+8VTXT9nv7pNqGny4ilN41ycr4DZi3sQoXdbruy7ClN7gsWW/GUiudBccHVIjmTapOFKLwZHODaUl/1/RDWQzh+i+17e1ivXuJPktDSrqmHPTZ15OjklnHKd6t179ry6VkGRg4R/R/YukVIqGzeaXGWAwdAQ5gE8cjGZghJLVi2jkDBJ85z8MvT+zLZLyliiuhLc/X8y7mkE1n0FKFtXXzFVt0l7V1LaEKbIbiV6XX3jsir4qgkqWjPHBZqO5mkGNFS16Dmt30/ZtEPAzXiINFXbWuWrpQ/LZ4NSto8IMrRTcoyDbAga/KYxJiNIeVuCe1E9dbytDM7K0GLtxJTul/WnnSeI6r//EFyC4bxYjyHhCXaag4q14KM+ak4rB0QgxsYzyGuh2MqyCoVj8YJLjLdKnL/SV7W7LPD40xlxvI6VCYTVi2ILHwL6vCxpukXYteX0c5IAIWkISDKu6nNBEgmCHXXPSqYSrgE5g7/QoCQHI8++nR8iKe0s7TWxZRydby8=
+    secure: "oX3IVGm9K/I6I0NBVTsqi4l7FFzw7v9KxYsUVBMs6R/vD8VFs52DvN+Zhb+TFL8fpNUOT5rKsRL8G48VMzevDWLy7UolqFlJ+MbV/yPuOEPy7xSEECWeRm56YQbBkvcyH9Cze100g3gSfDt0y0RySjmuve7Z+qlZ7VRmq58JdDjzxSJz0pK6pEwlBY25ZhbxyN0TX7sTOGhx1h0g4qEEHnYQ0VGoFTrjGUsuYMEKoBunlP46st9wFXP3fTAuIbN1LYU+93GgRLCvrwasiIUpN9dXw4eE8/WLc7Shan2KU5rAsGcfTSYCUWp+XM0oIRnK7SuDA2zowMaU+1RZdWcIgBWXj250n7s4+fa+u3P+3YGrUlCT+76Fo8Sq2V86xzDbPlwsbkxjvTntY+mlHLSEncjScgaDyOfAiF78YyHMb4W74tkgsSWFkfWPnc/o63TUQywKvaqbXnqSbhQnI7SAs8q4rCX5k9dYuuSN9bsv8S0288drALSpCS3eToLBNorgJm8ZMJwr3OIp3A10E1Zd2rj5V4HBu7hib/oPXZ5CJFVR7WfX7UuMtQy5+ytXs9seoqP143Uaf1DVsrjqDA2R14hDAcyYWJccPJrzC1wlCqCWCLPtNlyDQlSG0OK5/Ti1+ZpZAfVn20Zjg+7wt2M5vbl5LY26hk4df6HBSvu3eck="
   file_glob: true
   file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
   on:
@@ -54,7 +50,6 @@ deploy:
     # and nightly channels. This condition makes sure there is only one release
     # for such targets and that's generated using the stable channel
     condition: $TRAVIS_RUST_VERSION = stable
-    tags: true
   provider: releases
   skip_cleanup: true
 
