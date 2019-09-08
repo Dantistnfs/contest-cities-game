@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
@@ -9,11 +10,23 @@ use petgraph::graph::NodeIndex;
 use petgraph::Direction;
 
 fn main() -> Result<(), std::io::Error> {
+    let cmd_arguments: Vec<String> = env::args().collect();
+    let mut input_filename = "input-cities-list.txt";
+    let mut output_filename = "output.txt";
+    if cmd_arguments.len() < 3 {
+        println!("Program arguments not found, using default");
+        println!("Input file: {:?}", input_filename);
+        println!("Output file: {:?}", output_filename);
+    } else {
+        input_filename = &*cmd_arguments[1];
+        output_filename = &*cmd_arguments[2];
+    }
     let start = Instant::now();
     let mut found_cycles: Vec<Box<Vec<[char; 2]>>> = Vec::new();
-    let mut input_file = File::open("./input-cities-list.txt")?;
+    let mut input_file = File::open(input_filename)?;
     let mut input_string = String::new();
     input_file.read_to_string(&mut input_string)?;
+    input_string = input_string.replace("\r", ""); // helps on windows platform
     let mut city_names: Vec<&str> = input_string.split("\n").collect();
     city_names.pop(); // pops last empty value
     city_names.sort();
@@ -117,6 +130,14 @@ fn main() -> Result<(), std::io::Error> {
             graph[longest_base_path[start]],
             graph[longest_base_path[end]],
         ]);
+        let edge_index = graph
+            .find_edge(longest_base_path[start], longest_base_path[end])
+            .unwrap();
+        let edge_weight = graph.edge_weight_mut(edge_index).unwrap();
+        *edge_weight = *edge_weight - 1;
+        if *edge_weight == 0 {
+            graph.remove_edge(edge_index);
+        }
     }
     let mut notfound_counter = 0;
     let mut previous_found_cycles_len = found_cycles.len();
@@ -153,6 +174,69 @@ fn main() -> Result<(), std::io::Error> {
         }
         previous_found_cycles_len = found_cycles.len();
     }
+    println!("Total path len before embedding rounds {:?}", result.len());
+    // try to find path and embed them into result;
+    let mut replaces_found = 0;
+    for _ in 0..500 {
+        let mut found_replacement = false;
+        for (_, node_index) in graph_nodes.clone().into_iter() {
+            let mut found_paths =
+                depth_first_serach(node_index, &graph, &mut Vec::new(), &mut Vec::new());
+            found_paths.sort_by(|a, b| b.len().cmp(&a.len()));
+            for path in found_paths.iter().filter(|x| x.len() > 2) {
+                let path_len = path.len();
+                let path_describe = [graph[path[0]], graph[path[path_len - 1]]];
+                // check possible positions to embed
+                for (pair_pos, pair) in result.iter().enumerate() {
+                    if pair == &path_describe {
+                        let mut path_converted = Vec::new();
+                        for start in 0..path.len() - 1 {
+                            let end = start + 1;
+                            path_converted.push([graph[path[start]], graph[path[end]]]);
+                            let edge_index = graph.find_edge(path[start], path[end]).unwrap();
+                            let edge_weight = graph.edge_weight_mut(edge_index).unwrap();
+                            *edge_weight = *edge_weight - 1;
+                            if *edge_weight == 0 {
+                                graph.remove_edge(edge_index);
+                            }
+                        }
+                        let pair_clone = pair.clone();
+                        result.splice(pair_pos..pair_pos + 1, path_converted.iter().cloned());
+                        let edge_index = graph
+                            .find_edge(graph_nodes[&pair_clone[0]], graph_nodes[&pair_clone[1]])
+                            .unwrap_or({
+                                graph.add_edge(
+                                    graph_nodes[&pair_clone[0]],
+                                    graph_nodes[&pair_clone[1]],
+                                    0,
+                                );
+
+                                graph
+                                    .find_edge(
+                                        graph_nodes[&pair_clone[0]],
+                                        graph_nodes[&pair_clone[1]],
+                                    )
+                                    .unwrap()
+                            });
+                        let edge_weight = graph.edge_weight_mut(edge_index).unwrap();
+                        *edge_weight = *edge_weight + 1;
+                        found_replacement = true;
+
+                        break;
+                    }
+                }
+                if found_replacement == true {
+                    break;
+                }
+            }
+            if found_replacement == true {
+                replaces_found += 1;
+                break;
+            }
+        }
+    }
+    println!("Embedded {:?} new pathes", replaces_found);
+
     //Sort city names by length, so we would fild longest one first
     city_names.sort_by(|a, b| b.len().cmp(&a.len()));
     //Find longest city names according to letter pairs
@@ -168,7 +252,7 @@ fn main() -> Result<(), std::io::Error> {
             }
         }
     }
-    let mut output_file = File::create("output.txt")?;
+    let mut output_file = File::create(output_filename)?;
     output_file.write(result_string.as_bytes())?;
 
     println!(
