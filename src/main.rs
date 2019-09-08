@@ -54,7 +54,7 @@ fn main() -> Result<(), std::io::Error> {
     }
     //Search for cycles in grapg and exclude them
     let mut found_any = true;
-    let mut search_depth = 3;
+    let mut search_depth = 1;
     let depth_limit = 8;
     while search_depth <= depth_limit {
         if found_any == false {
