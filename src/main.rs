@@ -175,6 +175,7 @@ fn main() -> Result<(), std::io::Error> {
         "Time elapsed: {:?} milliseconds",
         start.elapsed().as_millis()
     );
+    let result_string = result_string.replace("\n", "");
     println!("Total path len: {:?}", result.len());
     println!("Total string len: {:?}", result_string.len());
     Ok(())
