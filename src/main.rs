@@ -162,6 +162,7 @@ fn main() -> Result<(), std::io::Error> {
             let city_chars: Vec<char> = city.to_lowercase().chars().collect();
             if city_chars[0] == pair[0] && city_chars[city.len() - 1] == pair[1] {
                 result_string.push_str(city);
+                result_string.push('\n');
                 city_names.remove(city_num);
                 break;
             }
